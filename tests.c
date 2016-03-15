@@ -11,7 +11,10 @@
 #include <stdlib.h>
 #include "bits.h"
 
+
+
 int main(int argc, char **argv) {
-    /* Write your tests here. */
+	int Test1 = evenBits();
+	printf("%d\n", Test1);
     return 0;
 }

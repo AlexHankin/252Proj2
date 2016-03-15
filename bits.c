@@ -34,7 +34,9 @@
  *   Legal ops: ! ~ & ^ | + << >>
  */
 int evenBits(void) {
-    return 0;
+    int byte = 0x55;
+	int word = byte + (byte<<8) + (byte<<16) + (byte<<24);
+	return word;
 }
 
 /*
