@@ -34,8 +34,8 @@
  *   Legal ops: ! ~ & ^ | + << >>
  */
 int evenBits(void) {
-    int byte = 0x55;
-	int word = byte + (byte<<8) + (byte<<16) + (byte<<24);
+    int temp = 0x55;
+	int word = temp + (temp<<8) + (temp<<16) + (temp<<24);
 	return word;
 }
 
@@ -45,7 +45,8 @@ int evenBits(void) {
  *   Legal ops: ~ |
  */
 int bitAnd(int x, int y) {
-    return 0;
+	int word = ~((~(x|x))|(~(y|y)));
+    return word;
 }
 
 /*
@@ -54,7 +55,13 @@ int bitAnd(int x, int y) {
  *   Legal ops: ! ~ & ^ | + << >>
  */
 int swapBytes(int x) {
-    return 0;
+	int temp0 = (0xFF & x);
+	temp0 = (temp0<<16);
+	int temp2 = (0xFF0000 & x);
+	temp2 = (temp2>>16);
+	int final = (0xFF00FF00 & x);
+	final = (final | temp0 | temp2);
+    return final;
 }
 
 /*
@@ -63,6 +70,8 @@ int swapBytes(int x) {
  *   Legal ops: ~ & ^ | + << >>
  */
 int rotateLeft(int x, int n) {
+	int nminus = 32 + (-n);
+	TempReplace = (x>>)
     return 0;
 }
 
