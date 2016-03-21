@@ -15,10 +15,11 @@
 
 int main(int argc, char **argv) {
 	int Test1 = evenBits();
-	printf("%d\n", Test1);
+	//printf("%d\n", Test1);
 	int Test2 = bitAnd(54, 87);
-	printf("%d\n", Test2);
+	//printf("%d\n", Test2);
 	int Test3 = swapBytes(0x33221100);
+<<<<<<< HEAD
 	printf("%d\n", Test3);
 	int Test4 = rotateLeft(0x76543210, 8);
 	printf("%d\n", Test4);
@@ -34,5 +35,14 @@ int main(int argc, char **argv) {
 	printf("%d\n", Test13);
 	printf("%d\n", Test14);
 	printf("%d\n", Test15);
+=======
+	//printf("%d\n", Test3);
+
+	int Tester = 1;
+	//Tester = Tester<<1;
+	//Tester = Tester>>29;
+	//printf("%d\n", Tester);
+
+>>>>>>> origin/master
     return 0;
 }
