@@ -70,9 +70,14 @@ int swapBytes(int x) {
  *   Legal ops: ~ & ^ | + << >>
  */
 int rotateLeft(int x, int n) {
-	int nminus = 32 + (-n);
-	TempReplace = (x>>)
-    return 0;
+	int nminus = (~n) + 1;
+	int shifter = 32 + nminus;
+	int theRotated = (x>>shifter);
+	int theRotatedShifted = (theRotated<<shifter);
+	int UnRotated = (theRotatedShifted ^ x);
+	int UnRotatedShifted = (UnRotated<<n);
+	int final =(theRotated|UnRotatedShifted);
+	return final;
 }
 
 /*
@@ -134,5 +139,9 @@ int multFiveEighths(int x) {
  *   Legal ops: ! ~ & ^ | + << >>
  */
 int isPwr2(unsigned int x) {
-    return 0;
+	int minusone = (~1) + 1;
+	int PowerTest = x + minusone;
+	PowerTest = (x & PowerTest);
+	int Indicator = (!PowerTest);
+    return Indicator;
 }

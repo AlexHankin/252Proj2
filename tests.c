@@ -20,9 +20,19 @@ int main(int argc, char **argv) {
 	printf("%d\n", Test2);
 	int Test3 = swapBytes(0x33221100);
 	printf("%d\n", Test3);
-	int Tester = 4294967295;
-	Tester = Tester<<29;
-	Tester = Tester>>29;
-	printf("%d\n", Tester);
+	int Test4 = rotateLeft(0x76543210, 8);
+	printf("%d\n", Test4);
+	int Test10 = isPwr2(2);
+	int Test11 = isPwr2(3);
+	int Test12 = isPwr2(4);
+	int Test13 = isPwr2(8);
+	int Test14 = isPwr2(16);
+	int Test15 = isPwr2(420);
+	printf("%d\n", Test10);
+	printf("%d\n", Test11);
+	printf("%d\n", Test12);
+	printf("%d\n", Test13);
+	printf("%d\n", Test14);
+	printf("%d\n", Test15);
     return 0;
 }
