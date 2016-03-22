@@ -33,9 +33,9 @@
  * evenBits: Return the word with all even-numbered bits set to 1.
  *   Legal ops: ! ~ & ^ | + << >>
  */
-int evenBits(void) {
-    int temp = 0x55;
-	int word = temp + (temp<<8) + (temp<<16) + (temp<<24);
+int evenBits(void) {					
+    int temp = 0x55;				//We make a local variable be the highest number with evenbits thats less than 255
+	int word = temp + (temp<<8) + (temp<<16) + (temp<<24);	//Use shifting to create larger evenbit numbers and add them together
 	return word;
 }
 
@@ -45,7 +45,7 @@ int evenBits(void) {
  *   Legal ops: ~ |
  */
 int bitAnd(int x, int y) {
-	int word = ~((~(x|x))|(~(y|y)));
+	int word = ~((~(x|x))|(~(y|y)));	//This is merely an 'and' logic gate created using a combination of the given operations.
     return word;
 }
 
@@ -55,12 +55,15 @@ int bitAnd(int x, int y) {
  *   Legal ops: ! ~ & ^ | + << >>
  */
 int swapBytes(int x) {
-	int temp0 = (0xFF & x);
-	temp0 = (temp0<<16);
-	int temp2 = (0xFF0000 & x);
-	temp2 = (temp2>>16);
-	int final = (0xFF00FF00 & x);
-	final = (final | temp0 | temp2);
+	int constant = 0xFF;					//Create a constant for 255 (8 bits of 1's)
+	int temp0 = (constant & x);				//We set temp0 equal to the first 8 bits (0th byte)
+	temp0 = (temp0<<16);					//We shift it 16 spaces to where it will eventually be moved to.
+	int temp2 = constant<<16;				//Create temp2 and set it to 255 displaced to where the 2nd byte is
+	temp2 = (temp2 & x);					//Set temp2 equal to the 2nd Byte of x
+	temp2 = (temp2>>16);					//Move it to the 0th byte (to where it will eventually be)
+	int final = (constant<<24) + (constant<<8);	//Create a final which will be the leftovers (1st and 3rd bytes)
+	final = (final & x);					//Set final to the specified bytes
+	final = (final | temp0 | temp2);		//Merge all thre components using or
     return final;
 }
 
@@ -70,13 +73,13 @@ int swapBytes(int x) {
  *   Legal ops: ~ & ^ | + << >>
  */
 int rotateLeft(int x, int n) {
-	int nminus = (~n) + 1;
-	int shifter = 32 + nminus;
-	int theRotated = (x>>shifter);
-	int theRotatedShifted = (theRotated<<shifter);
-	int UnRotated = (theRotatedShifted ^ x);
-	int UnRotatedShifted = (UnRotated<<n);
-	int final =(theRotated|UnRotatedShifted);
+	int nminus = (~n) + 1;								//creates a constant set to -n
+	int shifter = 32 + nminus;							//sets shifter equal to 32-n
+	int theRotated = (x>>shifter);						//moves the integer by (32-x) these are the bits that will be rotated to the end
+	int theRotatedShifted = (theRotated<<shifter);		//shift them back to their original location temporaily
+	int UnRotated = (theRotatedShifted ^ x);			//Use XOR with the rotated bits in order to find the bits that won't be looped back to the beginning
+	int UnRotatedShifted = (UnRotated<<n);				//Shift these bits to the left end of the number
+	int final =(theRotated|UnRotatedShifted);			//Combine the shifted non rotated values with our original rotated ones
 	return final;
 }
 
@@ -139,9 +142,9 @@ int multFiveEighths(int x) {
  *   Legal ops: ! ~ & ^ | + << >>
  */
 int isPwr2(unsigned int x) {
-	int minusone = (~1) + 1;
-	int PowerTest = x + minusone;
-	PowerTest = (x & PowerTest);
-	int Indicator = (!PowerTest);
+	int minusone = (~1) + 1;				//Create a constant for -1
+	int PowerTest = x + minusone;			//subtract our int by 1, this will make it all ones if it is a power of two
+	PowerTest = (x & PowerTest);			//use and between x and (x-1) if and only if it is a power of two, it will return all zeroes.
+	int Indicator = (!PowerTest);			//Use not to make it so the specific zero will become 1 when returned, and 0 if anything else was produced.
     return Indicator;
 }
