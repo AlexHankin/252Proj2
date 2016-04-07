@@ -70,16 +70,23 @@ int main(int argc, char * argv[]) {
 
 	
 	int RegSource;
-	int RegTemp;
+	int RegTemp, RegTemp2;
 	int RegT;
 	uint16_t immediate;
+	uint32_t immediateJump;
 	uint32_t immtemp;
-	int Func;
+	int Func, j, counter;
 	int RegDes;
+	int JumpTemp;
 	int Shamt;
 	int16_t offset;
 	int32_t offsettemp;
 	uint16_t returnaddress;
+	int8_t byteStore;
+	int16_t AddModifier;
+	
+	
+	AddModifier = 15;
 	
 	RegSource = (CurrentInstruction<<6);
 	RegSource = (RegSource>>27);
@@ -108,17 +115,43 @@ int main(int argc, char * argv[]) {
 	offsettemp = readWord(PC + 2, true);
 	offset = offsettemp>>16;
 	printf("Offset: %d\n", offset);
+	int byteNo = (RegFile[RegSource]+offset)%4;
 	
-	switch(OpCode) {
+	switch(OpCode) 
+	{
 		case 0:
-			switch(Func) {
+			switch(Func) 
+			{
 				case 32: //add
 					RegFile[RegDes] = RegFile[RegSource]+RegFile[RegT];
 					PC = PC + 4;
 					break;
 				
+				case 33: //addu		
+					if ((RegFile[RegSource] + RegFile[RegT]) > 4294967295){
+						RegFile[32]=4294967295-(RegFile[RegSource] + RegFile[RegT]);
+						RegFile[RegT] = 4294967295;
+					}
+					else{
+					RegTemp = RegFile[RegSource] + RegFile[RegT];
+					RegFile[RegT] = RegTemp;
+					}
+					PC = PC + 4;
+					break;
+				
 				case 34: //sub
 					RegFile[RegDes] = RegFile[RegSource]-RegFile[RegT];
+					PC = PC + 4;
+					break;
+					
+				case 35: //subu
+					if ((RegFile[RegSource] - RegFile[RegT]) < 0){
+						RegFile[RegT] = 0;
+					}
+					else{
+					RegTemp = RegFile[RegSource] - RegFile[RegT];
+					RegFile[RegT] = RegTemp;
+					}
 					PC = PC + 4;
 					break;
 				
@@ -129,10 +162,28 @@ int main(int argc, char * argv[]) {
 					RegFile[33] = (RegFile[RegSource]-RegFile[32])/RegFile[RegT];
 					PC = PC + 4;
 					break;
+					
+				case 27: //divu
+					RegFile[32] = RegFile[RegSource]%RegFile[RegT];
+					RegFile[33] = (RegFile[RegSource]-RegFile[32])/RegFile[RegT];
+					PC = PC + 4;
+					break;
 				
 				case 24: //mult
 					//RegFile[33] = 0;
 					RegFile[33] = RegFile[RegSource]*RegFile[RegT];
+					PC = PC + 4;
+					break;
+					
+				case 25: //multu
+					if ((RegFile[RegSource]*RegFile[RegT]) > 4294967295){
+						RegFile[32]=4294967295-(RegFile[RegSource]*RegFile[RegT]);
+						RegFile[RegT] = 4294967295;
+					}
+					else{
+					RegTemp = RegFile[RegSource]*RegFile[RegT];
+					RegFile[RegT] = RegTemp;
+					}
 					PC = PC + 4;
 					break;
 				
@@ -156,32 +207,101 @@ int main(int argc, char * argv[]) {
 					PC = PC + 4;
 					break;
 				
+				case 36: //add
+					RegFile[RegDes] = RegFile[RegSource] & RegFile[RegT];
+					PC = PC + 4;
+					break;
+				
+				case 37: //or
+					RegFile[RegDes] = RegFile[RegSource] | RegFile[RegT];
+					PC = PC + 4;
+					break;
+				
 				case 38: //xor
 					RegFile[RegDes] = (RegFile[RegSource] ^ RegFile[RegT]);
 					PC = PC + 4;
 					break;
+					
+				case 39: //nor
+					RegFile[RegDes] = ~((RegFile[RegSource] | RegFile[RegT]));
+					PC = PC + 4;
+					break;
 				
 				case 0: //sll
-					switch(RegDes){
-						case 0:
-							break;
-						
-						RegFile[RegDes] = (RegFile[RegT]<<Shamt);
-						PC = PC + 4;
-						break;
-					}
+					RegTemp = (RegFile[RegT]<<Shamt);
+					RegFile[RegDes] = RegTemp;
+					PC = PC + 4;
+					break;
+					
 				case 2: //srl
-					RegFile[RegDes] = (RegFile[RegT]>>Shamt);
+					RegTemp = (RegFile[RegT]>>Shamt);
+					RegFile[RegDes] = RegTemp;
+					PC = PC + 4;
+					break;
+					
+				case 3: //sra
+					RegTemp = RegFile[RegT]>>Shamt;
+					RegFile[RegDes] = RegTemp;
+					PC = PC + 4;
+					break;
+					
+				case 4: //sllv
+					RegTemp = (RegFile[RegT]<<RegFile[RegSource]);
+					RegFile[RegDes] = RegTemp;
+					PC = PC + 4;
+					break;
+					
+				case 5: //srlv
+					RegTemp = (RegFile[RegT]>>RegFile[RegSource]);
+					RegFile[RegDes] = RegTemp;
+					PC = PC + 4;
+					break;
+					
+				case 7: //srav
+					RegTemp = RegFile[RegT]>>RegFile[RegSource];
+					RegFile[RegDes] = RegTemp;
+					PC = PC + 4;
+					break;
+				
+				case 42: //slt
+					if (RegFile[RegSource]<RegFile[RegT]){
+						RegFile[RegDes] = 1;
+					}
+					else{
+						RegFile[RegDes] = 0;
+					}
+					PC = PC + 4;
+					break;
+				
+				case 43: //sltu
+					if(RegFile[RegSource] < 0){
+						RegTemp = 0;
+					}
+					else{
+						RegTemp = RegFile[RegSource];
+					}
+					if(RegFile[RegT] < 0){
+						RegTemp2 = 0;
+					}
+					else{
+						RegTemp2 = RegFile[RegT];
+					}
+					if (RegTemp<RegTemp2){
+						RegFile[RegDes] = 1;
+					}
+					else{
+						RegFile[RegDes] = 0;
+					}
 					PC = PC + 4;
 					break;
 				
 				case 8: //jr
 					jumper = 1;
-					returnaddress = RegSource;
-					returnaddress = returnaddress<<11;
-					returnaddress = returnaddress>>11;
-					printf("Return Address: %d\n", returnaddress);
-					RegTemp = RegFile[returnaddress];
+					//returnaddress = RegSource;
+					//returnaddress = returnaddress<<11;
+					//returnaddress = returnaddress>>11;
+					//printf("Return Address: %d\n", returnaddress);
+					JumpTemp = RegFile[RegSource];
 					break;
 					
 				case 9: //jalr
@@ -190,7 +310,7 @@ int main(int argc, char * argv[]) {
 					returnaddress = returnaddress<<11;
 					returnaddress = returnaddress>>11;
 					printf("Return Address: %d\n", returnaddress);
-					RegTemp = RegFile[RegSource];
+					JumpTemp = RegFile[RegSource];
 					RegFile[returnaddress] = PC + 8;
 					break;
 				
@@ -199,31 +319,142 @@ int main(int argc, char * argv[]) {
 					PC = PC + 4;
 					break;
 			}
-		break;
+			break;
 		
 		case 1: 
 			switch(RegT){
 				case 17: //bgezal
+					newPC = PC;
 					RegFile[31] = PC + 8;
 					if (RegFile[RegSource] >= 0){
 					offsettemp = 0;
 					offsettemp = offset;
 					offsettemp = offsettemp<<2;
-					RegTemp = PC + (offsettemp);
+					JumpTemp = PC + (offsettemp);
+					}
+					else{
+						PC = PC + 4;
 					}
 					jumper = 2;
 					break;
+					
+				case 1: //bgez
+					newPC = PC;
+					if (RegFile[RegSource] >= 0){
+					offsettemp = 0;
+					offsettemp = offset;
+					offsettemp = offsettemp<<2;
+					JumpTemp = PC + (offsettemp);
+					}
+					else{
+						PC = PC + 4;
+					}
+					jumper = 2;
+					break;
+					
+				case 0: //bltz
+					newPC = PC;
+					if (RegFile[RegSource] < 0){
+					offsettemp = 0;
+					offsettemp = offset;
+					offsettemp = offsettemp<<2;
+					JumpTemp = PC + (offsettemp);
+					jumper = 2;
+					}
+					else{
+						PC = PC + 4;
+					}
+					break;
+					
+				case 16: //bltzal
+					newPC = PC;
+					RegFile[31] = PC + 8;
+					if (RegFile[RegSource] < 0){
+					offsettemp = 0;
+					offsettemp = offset;
+					offsettemp = offsettemp<<2;
+					JumpTemp = PC + (offsettemp);
+					jumper = 2;
+					}
+					else{
+						PC = PC + 4;
+					}
+					break;
 			}
-		break;
+			break;
+		
+		case 2: //j
+			jumper = 1;
+			immtemp = readWord(PC, true);
+			immediateJump = immtemp<<6;
+			immediateJump = immediateJump>>6;
+			printf("Immidiate: %d\n", immediate);
+			JumpTemp = immediateJump;
+			break;
+			
+		case 3: //jal
+			jumper = 1;
+			immtemp = readWord(PC, true);
+			immediateJump = immtemp<<6;
+			immediateJump = immediateJump>>6;
+			printf("Immidiate: %d\n", immediate);
+			JumpTemp = immediateJump;
+			RegFile[31] = PC + 8;
+			break;
+		
 		case 4: //b or beq
 			newPC = PC;
 			if (RegFile[RegSource] == RegFile[RegT]){
 				offsettemp = 0;
 				offsettemp = offset;
 				offsettemp = offsettemp<<2;
-				RegTemp = PC + (offsettemp);
+				JumpTemp = PC + (offsettemp);
+				jumper = 2;
+			}
+			else{
+				PC = PC + 4;
+			}
+			break;
+			
+		case 5: //bne
+			newPC = PC;
+			offsettemp = 0;
+			offsettemp = offset;
+			offsettemp = offsettemp<<2;
+			if (RegFile[RegSource] != RegFile[RegT]){
+				jumper = 2;
+			}
+			else{
+				PC = PC + 4;
+			}
+			break;
+			
+		case 6: //blez
+			newPC = PC;
+			if (RegFile[RegSource] <= 0){
+			offsettemp = 0;
+			offsettemp = offset;
+			offsettemp = offsettemp<<2;
+			JumpTemp = PC + (offsettemp);
+			}
+			else{
+			PC = PC + 4;
 			}
 			jumper = 2;
+			break;
+		
+		case 7: //bgtz
+			newPC = PC;
+			if (RegFile[RegSource] > 0){
+				offsettemp = 0;
+				offsettemp = offset;
+				offsettemp = offsettemp<<2;
+				JumpTemp = PC + (offsettemp);
+				jumper = 2;
+			}
+			else{
+				PC = PC + 4;
+			}
 			break;
 		
 		case 8: //addi
@@ -249,6 +480,7 @@ int main(int argc, char * argv[]) {
 			printf("Immidiate: %d\n", immediate);
 		
 			if ((RegFile[RegSource] + immediate)>4294967295){
+				printf("Arith Overflow");
 				RegFile[RegT] = 4294967295;
 			}
 			else{
@@ -256,13 +488,66 @@ int main(int argc, char * argv[]) {
 			}
 			PC = PC + 4;
 			break;
+			
+		case 10: //slti
+			immtemp = readWord(PC + 2, true);
+			immediate = immtemp>>16;
+			printf("Immidiate: %d\n", immediate);
+			if (RegFile[RegSource]<immediate){
+				RegFile[RegT] = 1;
+			}
+			else{
+				RegFile[RegT] = 0;
+			}
+			PC = PC + 4;
+			break;
 		
+		case 11: //sltiu
+			immtemp = readWord(PC + 2, true);
+			immediate = immtemp>>16;
+			printf("Immidiate: %d\n", immediate);
+			if(RegFile[RegSource] < 0){
+				RegTemp = 0;
+			}
+			else{
+				RegTemp = RegFile[RegSource];
+			}
+			if(immediate < 0){
+				RegTemp2 = 0;
+			}
+			else{
+				RegTemp2 = RegFile[RegT];
+			}
+			if (RegTemp<RegTemp2){
+				RegFile[RegT] = 1;
+			}
+			else{
+				RegFile[RegT] = 0;
+			}
+			PC = PC + 4;
+			break;
+		
+		case 12: //adni
+			immtemp = readWord(PC + 2, true);
+			immediate = immtemp>>16;
+			printf("Immidiate: %d\n", immediate);
+			RegFile[RegT] = ((RegFile[RegSource])&(immediate));
+			PC = PC + 4;
+			break;
+
 		case 13: //ori,li
-			//printf("Hits ori/li");
 			immtemp = readWord(PC + 2, true);
 			immediate = immtemp>>16;
 			printf("Immidiate: %d\n", immediate);
 			RegFile[RegT] = ((RegFile[RegSource])|(immediate));
+			PC = PC + 4;
+			break;
+			
+		case 14: //xori
+			immtemp = readWord(PC + 2, true);
+			immediate = immtemp>>16;
+			printf("Immidiate: %d\n", immediate);
+			RegFile[RegT] = (RegFile[RegSource] ^ immediate);
 			PC = PC + 4;
 			break;
 			
@@ -277,9 +562,158 @@ int main(int argc, char * argv[]) {
 			PC = PC + 4;
 			break;
 			
-		case 35: //lw
+		case 20: //beql	
+			newPC = PC;
+			if (RegFile[RegSource] == RegFile[RegT]){
+				offsettemp = 0;
+				offsettemp = offset;
+				offsettemp = offsettemp<<2;
+				RegTemp = PC + (offsettemp);
+				jumper = 2;
+			}
+			else{
+				PC = PC + 8;
+			}
+			break;
 			
+		case 21: //bnel
+			newPC = PC;
+			if (RegFile[RegSource] != RegFile[RegT]){
+				offsettemp = 0;
+				offsettemp = offset;
+				offsettemp = offsettemp<<2;
+				RegTemp = PC + (offsettemp);
+				jumper = 2;
+			}
+			else{
+				PC = PC + 8;
+			}
+			break;
+		
+		case 22: //blezl
+			newPC = PC;
+			if (RegFile[RegSource] <= RegFile[RegT]){
+				offsettemp = 0;
+				offsettemp = offset;
+				offsettemp = offsettemp<<2;
+				RegTemp = PC + (offsettemp);
+				jumper = 2;
+			}
+			else{
+				PC = PC + 8;
+			}
+			break;
+			
+		case 32: //lb
+			RegFile[RegT] = readByte((RegFile[RegSource]+offset),true);
+			PC = PC + 4;
+			break; 
+			
+		case 33: //lh
+			immtemp = readWord((RegFile[RegSource]+offset),true);
+			immtemp = immtemp>>16;
+			RegFile[RegT]=immtemp;
+			PC = PC + 4;
+			break;
+			
+		case 34: //lwl
+			counter = 0;
+			AddModifier = 0;
+			for(j = byteNo; j<4;j += 1)
+			{
+			byteStore = readByte((RegFile[RegSource]+offset + j),true);
+			byteStore = byteStore<<(16 - (4*counter));
+			RegFile[RegT] = RegFile[RegT] | (~(AddModifier<<(16 - (4*counter)))) ;
+			RegFile[RegT] = RegFile[RegT] | byteStore;
+			}
+			PC = PC + 4;
+			break;
+			
+		case 35: //lw
 			RegFile[RegT] = readWord((RegFile[RegSource]+offset),true);
+			PC = PC + 4;
+			break;
+		
+		case 36: //lbu
+			if (RegFile[RegSource] + offset >= 65535){
+				RegFile[RegT] = 65535;
+			}
+			else{
+			RegFile[RegT] = readByte((RegFile[RegSource]+offset),true);
+			}
+			PC = PC + 4;
+			break; 
+			
+		case 37: //lhu
+			if (RegFile[RegSource] + offset >= 65535){
+				RegFile[RegT] = 65535;
+			}
+			else{
+			immtemp = readWord((RegFile[RegSource]+offset),true);
+			immtemp = immtemp>>16;
+			RegFile[RegT]=immtemp;
+			RegFile[RegT]=immtemp;
+			}
+			PC = PC + 4;
+			break; 
+			
+		case 38: //lwr
+			counter = 0;
+
+			AddModifier = 0;
+			for(j = byteNo; j>=0;j -= 1)
+			{
+			byteStore = readByte((RegFile[RegSource]+offset - j),true);
+			byteStore = byteStore<<(4*counter);
+			RegFile[RegT] = RegFile[RegT] | (~(AddModifier<<(4*counter))) ;
+			RegFile[RegT] = RegFile[RegT] | byteStore;
+			counter = counter + 1;
+			}
+			PC = PC + 4;
+			break;
+			
+		case 40: //sb
+			writeByte((RegFile[RegSource] + offset),RegFile[RegT],true);
+			PC = PC + 4;
+			break;
+		
+		case 41: //sh
+			immtemp = RegFile[RegT];
+			immtemp = immtemp>>16;
+			writeWord((RegFile[RegSource]+offset), immtemp, true);
+			immtemp = RegFile[RegT];
+			immtemp = immtemp<<16;
+			immtemp = immtemp>>16;
+			writeWord((RegFile[RegSource]+offset+16), immtemp, true);
+			PC = PC + 4;
+			break;
+			
+		case 42: //swl
+			counter = 0;
+			for(j = byteNo; j<4; j += 1)
+			{
+			byteStore = RegFile[RegT]<<(4*counter);
+			byteStore = byteStore>>12;
+			writeWord(RegFile[RegSource] + offset + j, byteStore,true);
+			counter = counter + 1;
+			}
+			PC = PC + 4;
+			break;
+			
+		case 43: //sw
+			writeWord((RegFile[RegSource] + offset),RegFile[RegT],true);
+			PC = PC + 4;
+			break;
+			
+		case 46: //swr
+			counter = 0;
+			for(j = 0; j<=byteNo;j += 1)
+			{
+			byteStore = RegFile[RegT]<<(16-(4+(4*counter)));
+			byteStore = byteStore>>12;
+			writeWord(RegFile[RegSource] + offset - j, byteStore,true);
+			counter = counter + 1;
+			}
 			PC = PC + 4;
 			break;
 	}
@@ -307,9 +741,11 @@ int main(int argc, char * argv[]) {
 		
 		switch(jumped){
 			case 1:  //jr,jalr
+				RegTemp = JumpTemp;
 				PC = RegTemp;
 				break;
 			case 2:	//b,bal
+				RegTemp = JumpTemp;
 				PC = newPC + RegTemp;
 				break;
 		}
