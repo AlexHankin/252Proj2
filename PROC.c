@@ -563,6 +563,7 @@ int main(int argc, char * argv[]) {
             immediate = immtemp>>16;
             RegFile[RegT] = immediate;
             printf("Immidiate: %d\n", immediate);
+			RegFile[RegT] = RegFile[RegT]<<16;
             PC = PC + 4;
             break;
             
@@ -634,7 +635,9 @@ int main(int argc, char * argv[]) {
             break;
             
         case 35: //lw
+			printf("Reading Line Begin\n");
             RegFile[RegT] = readWord((RegFile[RegSource]+offset),true);
+			printf("Reading Line End\n");
             PC = PC + 4;
             break;
         
