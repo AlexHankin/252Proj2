@@ -65,21 +65,21 @@ int main(int argc, char * argv[]) {
     //Add your implementation here
     /********************************/
 
-    uint8_t OpCode = readByte(PC,true);
+    int OpCode = readByte(PC,true);
     OpCode = OpCode>>2;
     printf("OpCode: %d\n", OpCode);
 	printf("Current Instruction: %08x\n", readWord(PC, true));
     printf("Instructions Completed: %d\n", InsCount);
 	
-    uint8_t RegSource;
-    int RegTemp, RegTemp2, counter, j;
-    uint8_t RegT;
+    int RegSource;
+    int RegTemp, RegTemp2;
+    int RegT;
     uint16_t immediate;
 	int16_t Signimmediate;
     uint32_t immediateJump;
     uint32_t immtemp;
-    u_int8 Func;
-    uint8_t RegDes;
+    int Func, j, counter;
+    int RegDes;
     int JumpTemp;
     int Shamt;
     int16_t offset;
