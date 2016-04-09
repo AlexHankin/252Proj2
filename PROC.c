@@ -75,6 +75,7 @@ int main(int argc, char * argv[]) {
     int RegTemp, RegTemp2;
     int RegT;
     uint16_t immediate;
+	int16_t Signimmediate;
     uint32_t immediateJump;
     uint32_t immtemp;
     int Func, j, counter;
@@ -109,7 +110,7 @@ int main(int argc, char * argv[]) {
     printf("RegT: %d\n", RegT);
     printf("RegDes: %d\n", RegDes);
     printf("Shamt: %d\n", Shamt);
-    newPC = readByte(PC,true);
+    //newPC = readByte(PC,true);
     
     Func = (CurrentInstruction & 63);
     printf("Func: %d\n", Func);
@@ -130,13 +131,17 @@ int main(int argc, char * argv[]) {
                     break;
                 
                 case 33: //addu     
-                    if ((RegFile[RegSource] + RegFile[RegT]) > 4294967295){
-                        RegFile[32]=4294967295-(RegFile[RegSource] + RegFile[RegT]);
-                        RegFile[RegT] = 4294967295;
-                    }
+                    if ((RegFile[RegSource] + RegFile[RegT])>2147483647){
+					printf("Arith Overflow");
+					RegFile[RegT] = 2147483647;
+					}
+					else if ((RegFile[RegSource] + RegFile[RegT])<-2147483648){
+					printf("Arith Overflow");
+					RegFile[RegT] = -2147483648;
+					}
                     else{
                     RegTemp = RegFile[RegSource] + RegFile[RegT];
-                    RegFile[RegT] = RegTemp;
+                    RegFile[RegDes] = RegTemp;
                     }
                     PC = PC + 4;
                     break;
@@ -426,7 +431,7 @@ int main(int argc, char * argv[]) {
                 offsettemp = 0;
                 offsettemp = offset;
                 offsettemp = offsettemp<<2;
-                JumpTemp = PC + (offsettemp);
+                JumpTemp = offsettemp;
                 printf("AAAAAAAAAA\n");
                 jumper = 2;
             }
@@ -482,15 +487,19 @@ int main(int argc, char * argv[]) {
         case 9: //addiu
             
             immtemp = readWord(PC + 2, true);
-            immediate = immtemp>>16;
-            printf("Immidiate: %d\n", immediate);
+            Signimmediate = immtemp>>16;
+            printf("Immidiate: %d\n", Signimmediate);
         
-            if ((RegFile[RegSource] + immediate)>4294967295){
+            if ((RegFile[RegSource] + Signimmediate)>2147483647){
                 printf("Arith Overflow");
-                RegFile[RegT] = 4294967295;
+                RegFile[RegT] = 2147483647;
             }
+			else if ((RegFile[RegSource] + Signimmediate)<-2147483648){
+                printf("Arith Overflow");
+                RegFile[RegT] = -2147483648;
+			}
             else{
-            RegFile[RegT] = RegFile[RegSource] + immediate;
+            RegFile[RegT] = RegFile[RegSource] + Signimmediate;
             }
             PC = PC + 4;
             break;
@@ -747,12 +756,16 @@ int main(int argc, char * argv[]) {
     if(jumped != 0){
         
         switch(jumped){
+			printf("Jumped: %d\n", jumped);
             case 1:  //jr,jalr
                 RegTemp = JumpTemp;
                 PC = RegTemp;
                 break;
             case 2: //b,bal
+				printf("NewPc: %08x\n", newPC);
+				printf("JumpTemp: %d\n", JumpTemp);
                 RegTemp = JumpTemp;
+				newPC = newPC + 4;
                 PC = newPC + RegTemp;
                 break;
         }
