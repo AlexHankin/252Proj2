@@ -65,26 +65,26 @@ int main(int argc, char * argv[]) {
     //Add your implementation here
     /********************************/
 
-    int OpCode = readByte(PC,true);
+    uint8_t OpCode = readByte(PC,true);
     OpCode = OpCode>>2;
     printf("OpCode: %d\n", OpCode);
 	printf("Current Instruction: %08x\n", readWord(PC, true));
     printf("Instructions Completed: %d\n", InsCount);
 	
-    int RegSource;
-    int RegTemp, RegTemp2;
-    int RegT;
+    uint8_t RegSource;
+    int RegTemp, RegTemp2, counter, j;
+    uint8_t RegT;
     uint16_t immediate;
 	int16_t Signimmediate;
     uint32_t immediateJump;
     uint32_t immtemp;
-    int Func, j, counter;
-    int RegDes;
+    u_int8 Func;
+    uint8_t RegDes;
     int JumpTemp;
     int Shamt;
     int16_t offset;
     int32_t offsettemp;
-    //uint16_t returnaddress;
+    uint16_t returnaddress;
     int8_t byteStore;
     int16_t AddModifier;
     
@@ -313,12 +313,12 @@ int main(int argc, char * argv[]) {
                     
                 case 9: //jalr
                     jumper = 3;
-                    //returnaddress = RegDes;
-                    //returnaddress = returnaddress<<11;
-                    //returnaddress = returnaddress>>11;
-                    //printf("Return Address: %d\n", returnaddress);
+                    returnaddress = RegDes;
+                    returnaddress = returnaddress<<11;
+                    returnaddress = returnaddress>>11;
+                    printf("Return Address: %d\n", returnaddress);
                     JumpTemp = RegFile[RegSource];
-                    RegFile[RegDes] = PC + 8;
+                    RegFile[returnaddress] = PC + 8;
                     break;
                 
                 case 12: //syscall
