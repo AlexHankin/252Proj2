@@ -84,7 +84,7 @@ int main(int argc, char * argv[]) {
     int Shamt;
     int16_t offset;
     int32_t offsettemp;
-    uint16_t returnaddress;
+    //uint16_t returnaddress;
     int8_t byteStore;
     int16_t AddModifier;
     
@@ -185,11 +185,11 @@ int main(int argc, char * argv[]) {
                 case 25: //multu
                     if ((RegFile[RegSource]*RegFile[RegT]) > 4294967295){
                         RegFile[32]=4294967295-(RegFile[RegSource]*RegFile[RegT]);
-                        RegFile[RegT] = 4294967295;
+                        RegFile[33] = 4294967295;
                     }
                     else{
                     RegTemp = RegFile[RegSource]*RegFile[RegT];
-                    RegFile[RegT] = RegTemp;
+                    RegFile[33] = RegTemp;
                     }
                     PC = PC + 4;
                     break;
