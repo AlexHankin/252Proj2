@@ -303,7 +303,7 @@ int main(int argc, char * argv[]) {
                     break;
                 
                 case 8: //jr
-                    jumper = 1;
+                    jumper = 3;
                     //returnaddress = RegSource;
                     //returnaddress = returnaddress<<11;
                     //returnaddress = returnaddress>>11;
@@ -312,13 +312,13 @@ int main(int argc, char * argv[]) {
                     break;
                     
                 case 9: //jalr
-                    jumper = 1;
-                    returnaddress = RegDes;
-                    returnaddress = returnaddress<<11;
-                    returnaddress = returnaddress>>11;
-                    printf("Return Address: %d\n", returnaddress);
+                    jumper = 3;
+                    //returnaddress = RegDes;
+                    //returnaddress = returnaddress<<11;
+                    //returnaddress = returnaddress>>11;
+                    //printf("Return Address: %d\n", returnaddress);
                     JumpTemp = RegFile[RegSource];
-                    RegFile[returnaddress] = PC + 8;
+                    RegFile[RegDes] = PC + 8;
                     break;
                 
                 case 12: //syscall
@@ -337,7 +337,7 @@ int main(int argc, char * argv[]) {
                     offsettemp = 0;
                     offsettemp = offset;
                     offsettemp = offsettemp<<2;
-                    JumpTemp = PC + (offsettemp);
+                    JumpTemp = offsettemp;
                     }
                     else{
                         PC = PC + 4;
@@ -351,7 +351,7 @@ int main(int argc, char * argv[]) {
                     offsettemp = 0;
                     offsettemp = offset;
                     offsettemp = offsettemp<<2;
-                    JumpTemp = PC + (offsettemp);
+                    JumpTemp = offsettemp;
                     }
                     else{
                         PC = PC + 4;
@@ -365,7 +365,7 @@ int main(int argc, char * argv[]) {
                     offsettemp = 0;
                     offsettemp = offset;
                     offsettemp = offsettemp<<2;
-                    JumpTemp = PC + (offsettemp);
+                    JumpTemp = offsettemp;
                     jumper = 2;
                     }
                     else{
@@ -380,7 +380,7 @@ int main(int argc, char * argv[]) {
                     offsettemp = 0;
                     offsettemp = offset;
                     offsettemp = offsettemp<<2;
-                    JumpTemp = PC + (offsettemp);
+                    JumpTemp = offsettemp;
                     jumper = 2;
                     }
                     else{
@@ -394,7 +394,7 @@ int main(int argc, char * argv[]) {
             jumper = 1;
             immtemp = readWord(PC, true);
             immediateJump = immtemp<<6;
-            immediateJump = immediateJump>>6;
+            immediateJump = immediateJump>>4;
             printf("Immidiate: %d\n", immediate);
             JumpTemp = immediateJump;
             break;
@@ -403,7 +403,7 @@ int main(int argc, char * argv[]) {
             jumper = 1;
             immtemp = readWord(PC, true);
             immediateJump = immtemp<<6;
-            immediateJump = immediateJump>>6;
+            immediateJump = immediateJump>>4;
             printf("Immidiate: %d\n", immediate);
             JumpTemp = immediateJump;
             RegFile[31] = PC + 8;
@@ -415,7 +415,7 @@ int main(int argc, char * argv[]) {
                 offsettemp = 0;
                 offsettemp = offset;
                 offsettemp = offsettemp<<2;
-                JumpTemp = PC + (offsettemp);
+                JumpTemp = offsettemp;
                 jumper = 2;
             }
             else{
@@ -446,7 +446,7 @@ int main(int argc, char * argv[]) {
             offsettemp = 0;
             offsettemp = offset;
             offsettemp = offsettemp<<2;
-            JumpTemp = PC + (offsettemp);
+            JumpTemp = offsettemp;
             }
             else{
             PC = PC + 4;
@@ -460,7 +460,7 @@ int main(int argc, char * argv[]) {
                 offsettemp = 0;
                 offsettemp = offset;
                 offsettemp = offsettemp<<2;
-                JumpTemp = PC + (offsettemp);
+                JumpTemp = offsettemp;
                 jumper = 2;
             }
             else{
@@ -757,9 +757,11 @@ int main(int argc, char * argv[]) {
         
         switch(jumped){
 			printf("Jumped: %d\n", jumped);
-            case 1:  //jr,jalr
+            case 1:  //j,jal
+				PC = PC>>28;
+				PC = PC<<28;
                 RegTemp = JumpTemp;
-                PC = RegTemp;
+                PC = PC | RegTemp;
                 break;
             case 2: //b,bal
 				printf("NewPc: %08x\n", newPC);
@@ -768,6 +770,9 @@ int main(int argc, char * argv[]) {
 				newPC = newPC + 4;
                 PC = newPC + RegTemp;
                 break;
+			case 3: //jalr, jr
+				RegTemp = JumpTemp;
+				PC = RegTemp;
         }
         printf("Branch delay completed\n");
         jumped = 0;
