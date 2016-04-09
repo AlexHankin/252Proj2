@@ -32,6 +32,7 @@ int main(int argc, char * argv[]) {
     uint32_t i; 
     uint32_t PC,newPC;
     uint32_t CurrentInstruction;
+	int InsCount = 0;
 
     if (argc < 2) {
       printf("Input argument missing \n");
@@ -67,8 +68,9 @@ int main(int argc, char * argv[]) {
     int OpCode = readByte(PC,true);
     OpCode = OpCode>>2;
     printf("OpCode: %d\n", OpCode);
-
-    
+	printf("Current Instruction: %08x\n", readWord(PC, true));
+    printf("Instructions Completed: %d\n", InsCount);
+	
     int RegSource;
     int RegTemp, RegTemp2;
     int RegT;
@@ -557,11 +559,9 @@ int main(int argc, char * argv[]) {
             
         case 15: //lui
             
-            RegFile[RegT] = 0;
             immtemp = readWord(PC + 2, true);
             immediate = immtemp>>16;
             RegFile[RegT] = immediate;
-            RegFile[RegT] = RegFile[RegT]<<16;
             printf("Immidiate: %d\n", immediate);
             PC = PC + 4;
             break;
@@ -763,7 +763,7 @@ int main(int argc, char * argv[]) {
         jumper = 0;
         PC = PC + 4;
     }
-    
+    InsCount = InsCount + 1;
     } //end fori
     
     
