@@ -76,8 +76,10 @@ int main(int argc, char * argv[]) {
     int RegT;
     uint16_t immediate;
 	int16_t Signimmediate;
+	int32_t Signimmtemp;
     uint32_t immediateJump;
-    uint32_t immtemp;
+    uint32_t immtemp, immtemp2;
+	uint32_t Rotated, Unrotated;
     int Func, j, counter;
     int RegDes;
     int JumpTemp;
@@ -152,9 +154,14 @@ int main(int argc, char * argv[]) {
                     break;
                     
                 case 35: //subu
-                    if ((RegFile[RegSource] - RegFile[RegT]) < 0){
-                        RegFile[RegT] = 0;
-                    }
+                    if ((RegFile[RegSource] - RegFile[RegT])>2147483647){
+					printf("Arith Overflow");
+					RegFile[RegT] = 2147483647;
+					}
+					else if ((RegFile[RegSource] - RegFile[RegT])<-2147483648){
+					printf("Arith Overflow");
+					RegFile[RegT] = -2147483648;
+					}
                     else{
                     RegTemp = RegFile[RegSource] - RegFile[RegT];
                     RegFile[RegT] = RegTemp;
@@ -163,8 +170,6 @@ int main(int argc, char * argv[]) {
                     break;
                 
                 case 26: //div
-                    //RegFile[32] = 0;
-                    //RegFile[33] = 0;
                     RegFile[32] = RegFile[RegSource]%RegFile[RegT];
                     RegFile[33] = (RegFile[RegSource]-RegFile[32])/RegFile[RegT];
                     PC = PC + 4;
@@ -177,16 +182,18 @@ int main(int argc, char * argv[]) {
                     break;
                 
                 case 24: //mult
-                    //RegFile[33] = 0;
                     RegFile[33] = RegFile[RegSource]*RegFile[RegT];
                     PC = PC + 4;
                     break;
                     
                 case 25: //multu
-                    if ((RegFile[RegSource]*RegFile[RegT]) > 4294967295){
-                        RegFile[32]=4294967295-(RegFile[RegSource]*RegFile[RegT]);
-                        RegFile[33] = 4294967295;
+                    if ((RegFile[RegSource]*RegFile[RegT]) > 2147483647){
+                    RegFile[33] = 2147483647;
                     }
+					else if ((RegFile[RegSource]*RegFile[RegT])<-2147483648){
+					printf("Arith Overflow");
+					RegFile[33] = -2147483648;
+					}
                     else{
                     RegTemp = RegFile[RegSource]*RegFile[RegT];
                     RegFile[33] = RegTemp;
@@ -247,8 +254,11 @@ int main(int argc, char * argv[]) {
                     break;
                     
                 case 3: //sra
-                    RegTemp = RegFile[RegT]>>Shamt;
-                    RegFile[RegDes] = RegTemp;
+					Rotated = (RegFile[RegT]<<(32-Shamt));
+					Rotated = Rotated>>(32-Shamt);
+					Unrotated = Rotated ^ RegFile[RegT];
+					Unrotated = Unrotated>>Shamt;
+                    RegFile[RegDes] = (Rotated | Unrotated);
                     PC = PC + 4;
                     break;
                     
@@ -265,8 +275,11 @@ int main(int argc, char * argv[]) {
                     break;
                     
                 case 7: //srav
-                    RegTemp = RegFile[RegT]>>RegFile[RegSource];
-                    RegFile[RegDes] = RegTemp;
+                    Rotated = (RegFile[RegT]<<(32-RegFile[RegSource]));
+					Rotated = Rotated>>(32-RegFile[RegSource]);
+					Unrotated = Rotated ^ RegFile[RegT];
+					Unrotated = Unrotated>>(RegFile[RegSource]);
+                    RegFile[RegDes] = (Rotated | Unrotated);
                     PC = PC + 4;
                     break;
                 
@@ -506,9 +519,9 @@ int main(int argc, char * argv[]) {
             
         case 10: //slti
             immtemp = readWord(PC + 2, true);
-            immediate = immtemp>>16;
-            printf("Immidiate: %d\n", immediate);
-            if (RegFile[RegSource]<immediate){
+            Signimmediate = immtemp>>16;
+            printf("Immidiate: %d\n", Signimmediate);
+            if (RegFile[RegSource]<Signimmediate){
                 RegFile[RegT] = 1;
             }
             else{
@@ -542,7 +555,7 @@ int main(int argc, char * argv[]) {
             PC = PC + 4;
             break;
         
-        case 12: //adni
+        case 12: //andi
             immtemp = readWord(PC + 2, true);
             immediate = immtemp>>16;
             printf("Immidiate: %d\n", immediate);
@@ -582,7 +595,7 @@ int main(int argc, char * argv[]) {
                 offsettemp = 0;
                 offsettemp = offset;
                 offsettemp = offsettemp<<2;
-                RegTemp = PC + (offsettemp);
+                RegTemp = offsettemp;
                 jumper = 2;
             }
             else{
@@ -596,7 +609,7 @@ int main(int argc, char * argv[]) {
                 offsettemp = 0;
                 offsettemp = offset;
                 offsettemp = offsettemp<<2;
-                RegTemp = PC + (offsettemp);
+                RegTemp = offsettemp;
                 jumper = 2;
             }
             else{
@@ -610,7 +623,7 @@ int main(int argc, char * argv[]) {
                 offsettemp = 0;
                 offsettemp = offset;
                 offsettemp = offsettemp<<2;
-                RegTemp = PC + (offsettemp);
+                RegTemp = offsettemp;
                 jumper = 2;
             }
             else{
@@ -626,6 +639,7 @@ int main(int argc, char * argv[]) {
         case 33: //lh
             immtemp = readWord((RegFile[RegSource]+offset),true);
             immtemp = immtemp>>16;
+			Signimmediate = immtemp;
             RegFile[RegT]=immtemp;
             PC = PC + 4;
             break;
@@ -645,31 +659,27 @@ int main(int argc, char * argv[]) {
             
         case 35: //lw
 			printf("Reading Line Begin\n");
-            RegFile[RegT] = readWord((RegFile[RegSource]+offset),true);
+			Signimmtemp = RegFile[RegSource];
+            RegFile[RegT] = readWord((Signimmtemp+offset),true);
 			printf("Reading Line End\n");
             PC = PC + 4;
             break;
         
         case 36: //lbu
-            if (RegFile[RegSource] + offset >= 65535){
-                RegFile[RegT] = 65535;
-            }
-            else{
+			returnaddress = RegFile[RegSource];
+            returnaddress = returnaddress<<11;
+            returnaddress = returnaddress>>11;
             RegFile[RegT] = readByte((RegFile[RegSource]+offset),true);
-            }
             PC = PC + 4;
             break; 
             
         case 37: //lhu
-            if (RegFile[RegSource] + offset >= 65535){
-                RegFile[RegT] = 65535;
-            }
-            else{
+			returnaddress = RegFile[RegSource];
+			returnaddress = returnaddress<<11;
+            returnaddress = returnaddress>>11;
             immtemp = readWord((RegFile[RegSource]+offset),true);
             immtemp = immtemp>>16;
             RegFile[RegT]=immtemp;
-            RegFile[RegT]=immtemp;
-            }
             PC = PC + 4;
             break; 
             
@@ -695,12 +705,11 @@ int main(int argc, char * argv[]) {
         
         case 41: //sh
             immtemp = RegFile[RegT];
-            immtemp = immtemp>>16;
-            writeWord((RegFile[RegSource]+offset), immtemp, true);
-            immtemp = RegFile[RegT];
-            immtemp = immtemp<<16;
-            immtemp = immtemp>>16;
-            writeWord((RegFile[RegSource]+offset+16), immtemp, true);
+			immtemp = immtemp<<16;
+            immtemp2 = readWord((RegFile[RegSource]+offset), true);
+			immtemp2 = immtemp2 & 65535;
+			immtemp2 = immtemp | immtemp2;
+            writeWord((RegFile[RegSource]+offset), immtemp2, true);
             PC = PC + 4;
             break;
             
