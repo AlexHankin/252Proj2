@@ -41,6 +41,7 @@ int main(int argc, char* argv[])
   int totalMisses = 0;
 
   char * filename;
+  char accessType[1];
 
 	//strings to compare
 	const char helpString[] = "-h";
@@ -166,9 +167,46 @@ int main(int argc, char* argv[])
   /* TODO: Now we simulate the cache */  
 
   /* Print results */
-  /*char Tester[50];
-  fgets(Tester, 50, myTrace);
-  printf("%s", Tester);*/
+  j = 0;
+  uint32_t myAddress;
+  uint32_t index;
+  uint32_t offset;
+  uint32_t tag;
+  
+  while(j == 0){
+  char Tester[50];
+  if((fgets(Tester, 50, myTrace)) != '\0'){			//This is what is new as of tonight mah man
+													//There are debugging print statements for each part of the address
+													//Also I guess the rest of the program will be contained in this if statement lol
+		 
+		 accessType[0] = Tester[0];					//AccessType is a 1character char that stores either "l" or "s"
+		 
+		 char AddTemp[9];							//AddTemp takes the substring of the hex part of each line (don't worry about this one)
+		 memcpy(AddTemp, &Tester[4], 8);
+		 AddTemp[8] = '\0';
+		 printf("%s\n", AddTemp);
+		 
+		 myAddress = strtol(AddTemp, NULL, 16);		//myAddress is AddTemp turned into a 32 bit number
+		 printf("%d\n", myAddress);
+		 
+		 offset = myAddress<<(32-offsetBits);		//offset is the offset portion of AddTemp
+		 offset = offset>>(32-offsetBits);
+		 printf("%d\n", offset);
+		 
+		 index = myAddress<<(tagBits);				//index is the index portion of Addtemp
+		 index = index>>(tagBits+offsetBits);
+		 printf("%d\n", index);
+		 
+		 tag = myAddress>>(32-tagBits);				//tag is the tag portion of Addtemp
+		 printf("%d\n", tag);
+		 
+		 j += 1;									//This purposefully stops it at one line just for debugging
+	}
+	else{
+		 j += 1;									//Ends the while loop if line is blank
+	}
+  }
+  
   printf("Miss Rate: %8lf%%\n", ((double) totalMisses) / ((double) totalMisses + (double) totalHits) * 100.0);
   printf("Read Transactions: %d\n", read_xactions);
   printf("Write Transactions: %d\n", write_xactions);
