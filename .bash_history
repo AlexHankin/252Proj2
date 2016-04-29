@@ -23,3 +23,5 @@ dir
 make tests.c
 sudo yum install build-essential
 ssh nperez@cycle1.csug.rochester.edu
+ssh nperez@cycle1.csug.rochester.edu
+ssh nperez@cycle1.csug.rochester.edu
