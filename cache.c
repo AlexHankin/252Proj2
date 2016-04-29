@@ -161,7 +161,21 @@ int main(int argc, char* argv[])
 	}
 
 	//create an array of all used tags
-	uint32_t usedArray[]
+	
+	int lines = 0;
+	while(!feof(myTrace))
+	{
+		char newLine = fgetc(myTrace);
+		if(newLine == '\n')
+		{
+			lines += 1;
+		}
+	}
+	lines = lines - capacitySize;
+	uint32_t usedArray[lines];
+	//int n = sizeof(usedArray)/sizeof(usedArray[0]);
+	//printf("Size of Memory: %d\n", n);
+	
 
 	int indexBits = 0;
 	int counter = 1;
@@ -191,6 +205,8 @@ int main(int argc, char* argv[])
   uint32_t index;
   //uint32_t offset;
   uint32_t tag;
+
+  rewind(myTrace);
   
   while(j < 1){
 	  char Tester[50];
