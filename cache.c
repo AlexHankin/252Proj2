@@ -141,7 +141,7 @@ int main(int argc, char* argv[])
 		}
 	}
 	int rows = sets;
-	int columns = 3 * ways;  //valid, dirty, tag repeat ...
+	int columns = 3 * ways + 1;  //valid, dirty, tag repeat ... followed by first in first out counter
 	uint32_t myCache$[rows][columns]; 
 
 	//insantiate everything in cache
@@ -173,6 +173,7 @@ int main(int argc, char* argv[])
 	}
 	lines = lines - capacitySize;
 	uint32_t usedArray[lines];
+	uint32_t usedIndex = 0;
 	//int n = sizeof(usedArray)/sizeof(usedArray[0]);
 	//printf("Size of Memory: %d\n", n);
 	
@@ -237,13 +238,42 @@ int main(int argc, char* argv[])
 			 printf("tag: %d\n", tag);
 			 
 			 //simulate cache i guess
-			 //need to use a dynamic old array................
+			 //need to use a dynamic old array................ check :)
 
 			 //go to index for loop to compare the tags
-			 //if in index then hit
+			 for(int x=0;x<columns;x+=3){
+			 	if(myCache$[index][x]==1)
+			 		if(myCache$[index][x+2]==tag)
+			 			//HIT!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
+			 }
+
 			 //if not in index then insert by first in first out... 
 			 //then add to capacity array first in first out... when removing add to usedArray
-			 //check if tag is in capacity array, if so, conflict
+
+			if(myCache$[index][myCache$[index][columns-1]] == 0 ){
+				myCache$[index][myCache$[index][columns-1]] = 1; 
+				myCache$[index][myCache$[index][columns-1] + 2] = tag;
+				//COMPULSURY!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			}
+			else{
+				if(capacityArray[capacityIndex] == -1)
+					capacityArray[capacityIndex] = myCache$[index][myCache$[index][columns-1] + 2];
+				else{
+					usedArray[usedIndex]=capacityArray[capacityIndex];
+					usedIndex = usedIndex + 1;
+				}
+
+				if(capacityIndex + 1 == capacitySize)
+					capacityIndex = 0;
+				else
+					capacityIndex = capacityIndex + 1;
+			}
+
+			//check if tag is in capacity array, if so, conflict
+			for(int x = 0; x < capacitySize ; x++){
+				
+			}
+			 
 			 //if not check if in used, if not compolsury and add to used
 			 //if so then conflict
 
@@ -255,6 +285,18 @@ int main(int argc, char* argv[])
 		}
   }
   
+  //to do list
+  //old array that contains index and tag
+  //capacity array that also contains last deleted things for capacity size
+  //go to index and compare tags
+  //if its there hit else...
+  //Check if it is in cpacity, if so Conflict
+  //then check if in used, then capacity
+  //if not it is compulsory
+  //add first in first out to index... if removing add to capacity array
+  //add to capacity first in first out, if removing, add to used
+
+
   printf("Miss Rate: %8lf%%\n", ((double) totalMisses) / ((double) totalMisses + (double) totalHits) * 100.0);
   printf("Read Transactions: %d\n", read_xactions);
   printf("Write Transactions: %d\n", write_xactions);
