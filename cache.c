@@ -35,6 +35,7 @@ int main(int argc, char* argv[])
 	uint32_t ways = 1; //# of ways in L1. Default to direct-mapped
 	uint32_t line = 32; //line size (B)
 	FILE * myTrace;
+	FILE * myTrace2;
 
   // hit and miss counts
   int totalHits = 0;
@@ -141,7 +142,7 @@ int main(int argc, char* argv[])
 		}
 	}
 	int rows = sets;
-	int columns = 3 * ways + 1;  //valid, dirty, tag repeat ... followed by first in first out counter
+	int columns = (2 * ways) + 2;  //valid, dirty, tag repeat ... followed by first in first out counter
 	uint32_t myCache$[rows][columns]; 
 
 	//insantiate everything in cache
@@ -152,12 +153,13 @@ int main(int argc, char* argv[])
 
 	//capacity array for checking misses... 
 	uint32_t capacitySize = sets*ways;
-	uint32_t capacityArray[capacitySize]; 
+	uint32_t capacityArray[capacitySize][2]; 
 	uint32_t capacityIndex = 0;
 
-	for (int x = 0; i < capacitySize; x++)
+	for (int x = 0; x < capacitySize; x++)
 	{
-		capacityArray[x] = -1;
+		capacityArray[x][0] = -1;
+		capacityArray[x][1] = -1;
 	}
 
 	//create an array of all used tags
@@ -172,7 +174,7 @@ int main(int argc, char* argv[])
 		}
 	}
 	lines = lines - capacitySize;
-	uint32_t usedArray[lines];
+	uint32_t usedArray[lines][2];
 	uint32_t usedIndex = 0;
 	//int n = sizeof(usedArray)/sizeof(usedArray[0]);
 	//printf("Size of Memory: %d\n", n);
@@ -204,27 +206,37 @@ int main(int argc, char* argv[])
   j = 0;
   uint32_t myAddress;
   uint32_t index;
+  uint32_t data;
   //uint32_t offset;
   uint32_t tag;
-
-  rewind(myTrace);
+  int fifoCount = 0;
+  int UsedCount = 0;
+  int hit = 0;
+  char * missType;
   
-  while(j < 1){
+  rewind(myTrace);
+  char * Sim = ".simulated";
+  char * Simulated = strcat(filename, Sim);
+  printf("%s\n", Simulated);
+  myTrace2 = fopen(("%s", Simulated), "w");
+  char * newLine;
+  char * newLine2;
+  
+  while(j == 0){
 	  char Tester[50];
 	  if((fgets(Tester, 50, myTrace)) != '\0'){			//This is what is new as of tonight mah man
 														//There are debugging print statements for each part of the address
-														//Also I guess the rest of the program will be contained in this if statement lol
-			 
+			hit = 0;											//Also I guess the rest of the program will be contained in this if statement lol
 			 accessType[0] = Tester[0];					//AccessType is a 1character char that stores either "l" or "s"
-			 printf("accessType: %c\n", accessType[0]);
+			 //printf("accessType: %c\n", accessType[0]);
 
 			 char AddTemp[9];							//AddTemp takes the substring of the hex part of each line (don't worry about this one)
 			 memcpy(AddTemp, &Tester[4], 8);
 			 AddTemp[8] = '\0';
-			 printf("hex: %s\n", AddTemp);
+			// printf("hex: %s\n", AddTemp);
 			 
 			 myAddress = strtol(AddTemp, NULL, 16);		//myAddress is AddTemp turned into a 32 bit number
-			 printf("myAdress: %d\n", myAddress);
+			 //printf("myAdress: %d\n", myAddress);
 			 
 			 //offset = myAddress<<(32-offsetBits);		//offset is the offset portion of AddTemp
 			 //offset = offset>>(32-offsetBits);
@@ -232,25 +244,46 @@ int main(int argc, char* argv[])
 			 
 			 index = myAddress<<(tagBits);				//index is the index portion of Addtemp
 			 index = index>>(tagBits+offsetBits);
-			 printf("index: %d\n", index);
+			 //printf("index: %d\n", index);
 			 
 			 tag = myAddress>>(32-tagBits);				//tag is the tag portion of Addtemp
-			 printf("tag: %d\n", tag);
+			 //printf("tag: %d\n", tag);
+			 
+			 data = myAddress>>(offsetBits);			//data is the tag+index
 			 
 			 //simulate cache i guess
 			 //need to use a dynamic old array................ check :)
 
 			 //go to index for loop to compare the tags
-			 for(int x=0;x<columns;x+=3){
-			 	if(myCache$[index][x]==1)
-			 		if(myCache$[index][x+2]==tag)
-			 			//HIT!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
+			for(int x = 2; x<columns; x++){
+				if(myCache$[index][x]==tag){
+					if(tag == 0){
+						if(myCache$[index][1] == 1){
+							hit = 1;
+							totalHits = totalHits + 1;
+							break;
+						}
+						else{
+							hit = 0;
+						}
+					}
+					else{
+						hit = 1;
+						totalHits = totalHits + 1;
+						break;
+					}
+				}
+						//HIT!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
+						x++;
 			 }
+			 
+			 
+			 
 
 			 //if not in index then insert by first in first out... 
 			 //then add to capacity array first in first out... when removing add to usedArray
 
-			if(myCache$[index][myCache$[index][columns-1]] == 0 ){
+			/*if(myCache$[index][myCache$[index][columns-1]] == 0 ){
 				myCache$[index][myCache$[index][columns-1]] = 1; 
 				myCache$[index][myCache$[index][columns-1] + 2] = tag;
 				//COMPULSURY!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -272,13 +305,48 @@ int main(int argc, char* argv[])
 			//check if tag is in capacity array, if so, conflict
 			for(int x = 0; x < capacitySize ; x++){
 				
-			}
+			}*/
 			 
 			 //if not check if in used, if not compolsury and add to used
 			 //if so then conflict
 
+			 if (hit == 0){
+				 
+				totalMisses = totalMisses + 1;
+				myCache$[index][1] = 1;
+				
+				usedArray[UsedCount][0] = myCache$[index][2 + (fifoCount*2)];
+				usedArray[UsedCount][1] = myCache$[index][3 + (fifoCount*2)];
+				myCache$[index][2 + (fifoCount*2)] = tag;
+				myCache$[index][3 + (fifoCount*2)] = data;
+					
+				UsedCount = UsedCount + 1;
+				if(fifoCount = ways - 1){
+					fifoCount = 0;
+				}
+				else{
+					fifoCount = fifoCount + 1;
+				}
+				
+			 }
+			 int i = 0;
+			char TesterSave[50];
+			memset(&TesterSave[0], 0, sizeof(TesterSave));
+			strncpy(TesterSave, Tester, 12);
+			 if (hit == 1){
+				missType = " hit";
+				newLine = strcat(TesterSave, missType);
+				newLine2 = strcat(newLine, "\r\n");
+				fprintf(myTrace2, ("%s", newLine2));
+			 }
+			 else{
+				missType = " miss";
+				newLine = strcat(TesterSave, missType);
+				newLine2 = strcat(newLine, "\r\n");
+				fprintf(myTrace2, ("%s", newLine2));
+			 }
 
-			 j += 1;									//This purposefully stops it at one line just for debugging
+			 //j += 1;									//This purposefully stops it at one line just for debugging
 		}
 		else{
 			 j += 1;									//Ends the while loop if line is blank
