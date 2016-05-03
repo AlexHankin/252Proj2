@@ -1,5 +1,6 @@
 #include "cache.h"
 #include "trace.h"
+#include <limits.h>
 
 int write_xactions = 0;
 int read_xactions = 0;
@@ -34,6 +35,7 @@ int main(int argc, char* argv[])
 	uint32_t size = 32; //total size of L1$ (KB)
 	uint32_t ways = 1; //# of ways in L1. Default to direct-mapped
 	uint32_t line = 32; //line size (B)
+	int lru = 0;
 	FILE * myTrace;
 	FILE * myTrace2;
 
@@ -42,7 +44,7 @@ int main(int argc, char* argv[])
   int totalMisses = 0;
 
   char * filename;
-  char accessType[1];
+
 
 	//strings to compare
 	const char helpString[] = "-h";
@@ -122,8 +124,10 @@ int main(int argc, char* argv[])
     }
     else if (!strcmp(lruString, argv[i])) {
       // Extra Credit: Implement Me!
-			printf("Unrecognized argument. Exiting.\n");
-			return -1;
+    		i++;
+    		lru=1;
+			//printf("Unrecognized argument. Exiting.\n");
+			//return -1;
     }
 		//unrecognized input
 		else{
@@ -133,7 +137,7 @@ int main(int argc, char* argv[])
 	}
 	
   /* TODO: Probably should intitalize the cache */
-	uint32_t sets = 1000 * size;
+	uint32_t sets = 1024 * size;
 	int j;
 	for(j = 0; j<sets; j++){
 		if (((line*ways)*j)>=sets){
@@ -141,8 +145,8 @@ int main(int argc, char* argv[])
 			break;
 		}
 	}
-	int rows = sets;
-	int columns = (2 * ways) + 2;  //valid, dirty, tag repeat ... followed by first in first out counter
+	uint32_t rows = sets;
+	uint32_t columns = (4 * ways) + 1;  //valid, dirty, tag, recently used repeat ... followed by first in first out counter
 	uint32_t myCache$[rows][columns]; 
 
 	//insantiate everything in cache
@@ -153,18 +157,19 @@ int main(int argc, char* argv[])
 
 	//capacity array for checking misses... 
 	uint32_t capacitySize = sets*ways;
-	uint32_t capacityArray[capacitySize][2]; 
-	uint32_t capacityIndex = 0;
+	uint32_t capacityArray[capacitySize][3];//index tag recently used 
+	uint32_t capacityIndex = 0;//first in first out counter
 
 	for (int x = 0; x < capacitySize; x++)
 	{
 		capacityArray[x][0] = -1;
 		capacityArray[x][1] = -1;
+		capacityArray[x][2] = -1;
 	}
 
 	//create an array of all used tags
 	
-	int lines = 0;
+	uint32_t lines = 0;
 	while(!feof(myTrace))
 	{
 		char newLine = fgetc(myTrace);
@@ -213,27 +218,35 @@ int main(int argc, char* argv[])
   int UsedCount = 0;
   int hit = 0;
   char * missType;
+  missType = (char *) malloc(12 * sizeof(char));
+  char * accessType;
+  accessType = (char *) malloc( sizeof(char));
+  char * AddTemp;
+  AddTemp = (char *) malloc(9* sizeof(char));
+
+
   
   rewind(myTrace);
   char * Sim = ".simulated";
   char * Simulated = strcat(filename, Sim);
-  printf("%s\n", Simulated);
+  //printf("%s\n", Simulated);
   myTrace2 = fopen(("%s", Simulated), "w");
-  char * newLine;
-  char * newLine2;
-  
+  char * newLine=(char *) malloc(100 * sizeof(char));
+  char * newLine2=(char *) malloc( 100 * sizeof(char));
   while(j == 0){
-	  char Tester[50];
+
+	  char * Tester;
+	  Tester = (char *) malloc(50);
 	  if((fgets(Tester, 50, myTrace)) != '\0'){			//This is what is new as of tonight mah man
 														//There are debugging print statements for each part of the address
 			hit = 0;											//Also I guess the rest of the program will be contained in this if statement lol
 			 accessType[0] = Tester[0];					//AccessType is a 1character char that stores either "l" or "s"
 			 //printf("accessType: %c\n", accessType[0]);
 
-			 char AddTemp[9];							//AddTemp takes the substring of the hex part of each line (don't worry about this one)
+			 //char * AddTemp[9];						//AddTemp takes the substring of the hex part of each line (don't worry about this one)
 			 memcpy(AddTemp, &Tester[4], 8);
 			 AddTemp[8] = '\0';
-			// printf("hex: %s\n", AddTemp);
+			//printf("hex: %s\n", AddTemp);
 			 
 			 myAddress = strtol(AddTemp, NULL, 16);		//myAddress is AddTemp turned into a 32 bit number
 			 //printf("myAdress: %d\n", myAddress);
@@ -241,108 +254,288 @@ int main(int argc, char* argv[])
 			 //offset = myAddress<<(32-offsetBits);		//offset is the offset portion of AddTemp
 			 //offset = offset>>(32-offsetBits);
 			 //printf("offset: %d\n", offset);
-			 
-			 index = myAddress<<(tagBits);				//index is the index portion of Addtemp
-			 index = index>>(tagBits+offsetBits);
+			 if(indexBits!=0){
+			 	index = myAddress<<(tagBits);				//index is the index portion of Addtemp
+			 	index = index>>(tagBits+offsetBits);
+			}
+			else
+				index=0;
 			 //printf("index: %d\n", index);
 			 
 			 tag = myAddress>>(32-tagBits);				//tag is the tag portion of Addtemp
 			 //printf("tag: %d\n", tag);
 			 
 			 data = myAddress>>(offsetBits);			//data is the tag+index
-			 
-			 //simulate cache i guess
-			 //need to use a dynamic old array................ check :)
 
 			 //go to index for loop to compare the tags
-			for(int x = 2; x<columns; x++){
-				if(myCache$[index][x]==tag){
-					if(tag == 0){
-						if(myCache$[index][1] == 1){
-							hit = 1;
-							totalHits = totalHits + 1;
-							break;
-						}
-						else{
-							hit = 0;
-						}
-					}
-					else{
+
+			for(int x = 0; x<columns-1; x = x + 4){
+
+				if(myCache$[index][x]==1){
+
+					if(myCache$[index][x+2]==tag){
+
 						hit = 1;
-						totalHits = totalHits + 1;
+						totalHits = totalHits + 1; //ad to total hit
+						if(accessType[0]=='s')
+							myCache$[index][x+1] = 1; //if save make dirty...
+						
+						if(lru==1){
+							myCache$[index][x+3]=myCache$[index][columns-1]+1;
+							myCache$[index][columns-1] = myCache$[index][columns-1] + 1;
+						}
+						
+						int inCapacity = 0;
+						for(int z = 0; z<capacitySize;z++){//add to hit counter for our capacity array
+			 				if(capacityArray[z][0]==index)
+			 					if(capacityArray[z][1]==tag){
+			 						inCapacity = 1;
+			 						if(lru==1){
+				 						capacityArray[z][2]=capacityIndex;
+				 						capacityIndex=capacityIndex+1;
+				 					}
+				 					break;
+			 					}
+			 			}
+			 			
+			 			if (inCapacity==0){
+			 				if(lru==0){
+			 					//add new value to capacity array first in first out...
+								//if capacity deletes add to used...
+								if(capacityArray[capacityIndex][0]==-1){
+										capacityArray[capacityIndex][0] = index;
+										capacityArray[capacityIndex][1] = tag;
+								}
+								else{
+										usedArray[usedIndex][0] = capacityArray[capacityIndex][0];
+										usedArray[usedIndex][1] = capacityArray[capacityIndex][1];
+
+										capacityArray[capacityIndex][0] = index;
+										capacityArray[capacityIndex][1] = tag;
+
+										//incrememnt used
+										usedIndex = usedIndex + 1;
+								}
+
+								//properly increase capacity Array's index
+								if(capacityIndex + 1 == capacitySize)
+									capacityIndex = 0;
+								else
+									capacityIndex = capacityIndex + 1;
+					 		}
+			 				else{
+			 					//add new value to capacity array least recently used...
+								//if capacity deletes add to used...
+								int lruCapacityRow = 0;
+								int lowestUsedCapacity = INT_MAX;
+								for(int z=0;z<capacitySize;z++){
+									if(capacityArray[z][2]<lowestUsedCapacity){
+										lowestUsedCapacity = capacityArray[z][2];
+										lruCapacityRow=z;
+									}
+								}
+								if(capacityArray[lruCapacityRow][0]==-1){
+										capacityArray[lruCapacityRow][0] = index;
+										capacityArray[lruCapacityRow][1] = tag;
+										capacityArray[lruCapacityRow][2] = capacityIndex;
+								}
+								else{
+										usedArray[usedIndex][0] = capacityArray[lruCapacityRow][0];
+										usedArray[usedIndex][1] = capacityArray[lruCapacityRow][1];
+
+										capacityArray[lruCapacityRow][0] = index;
+										capacityArray[lruCapacityRow][1] = tag;
+										capacityArray[lruCapacityRow][2] = capacityIndex;
+
+										//incrememnt used
+										usedIndex = usedIndex + 1;
+								}
+								capacityIndex=capacityIndex+1;
+			 				}
+			 			}
 						break;
 					}
 				}
-						//HIT!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
-						x++;
 			 }
-			 
-			 
-			 
 
-			 //if not in index then insert by first in first out... 
-			 //then add to capacity array first in first out... when removing add to usedArray
+			 //if not hit
+			 if (hit==0){
+			 	totalMisses = totalMisses + 1; //add to misses
+			 	int caseA = 0;
+			 	int caseB = 0;
 
-			/*if(myCache$[index][myCache$[index][columns-1]] == 0 ){
-				myCache$[index][myCache$[index][columns-1]] = 1; 
-				myCache$[index][myCache$[index][columns-1] + 2] = tag;
-				//COMPULSURY!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-			}
-			else{
-				if(capacityArray[capacityIndex] == -1)
-					capacityArray[capacityIndex] = myCache$[index][myCache$[index][columns-1] + 2];
-				else{
-					usedArray[usedIndex]=capacityArray[capacityIndex];
-					usedIndex = usedIndex + 1;
-				}
+			 	//Check if in capacity if its there then conflict else...
+			 	for(int x = 0; x<capacitySize;x++){
+			 		if(capacityArray[x][0]==index)
+			 			if(capacityArray[x][1]==tag){
+			 				missType = " conflict";
+			 				caseA = 1;
+			 				//if(lru==1){//hit in capacity array update accordingly
+			 				//	capacityArray[x][2]=capacityIndex;
+			 				//	capacityIndex=capacityIndex+1;
+			 				//}
+			 				break;
+			 			}
+			 	}
+			 	//check if in used then its capacity else...
+			 	if(caseA==0){
+			 		for(int x = 0; x<usedIndex; x++){
+			 			if(usedArray[x][0]==index)
+			 				if(usedArray[x][1]==tag){
+			 					missType = " capacity";
+			 					caseB = 1;
+			 				}
+			 		}
+			 		//compulsory
+			 		if(caseB==0){
+			 			missType = " compulsory";
+			 		}
+			 	}
 
-				if(capacityIndex + 1 == capacitySize)
-					capacityIndex = 0;
-				else
-					capacityIndex = capacityIndex + 1;
-			}
+			 	if(lru==0){//IF FIRST IN FIRST OUT
+				 	//insert into cache first in first out
 
-			//check if tag is in capacity array, if so, conflict
-			for(int x = 0; x < capacitySize ; x++){
-				
-			}*/
-			 
-			 //if not check if in used, if not compolsury and add to used
-			 //if so then conflict
+				 	//if not valid make valid and insert
+					if(myCache$[index][myCache$[index][columns-1]] == 0 ){
+						myCache$[index][myCache$[index][columns-1]] = 1;
+						myCache$[index][myCache$[index][columns-1] + 2] = tag;
+					}
+					else{
+						//else just insert....after check dirty
+						if(myCache$[index][myCache$[index][columns-1] + 1]==1)
+							write_xactions = write_xactions + 1;
+						myCache$[index][myCache$[index][columns-1] + 2] = tag;
+					}
 
-			 if (hit == 0){
-				 
-				totalMisses = totalMisses + 1;
-				myCache$[index][1] = 1;
-				
-				usedArray[UsedCount][0] = myCache$[index][2 + (fifoCount*2)];
-				usedArray[UsedCount][1] = myCache$[index][3 + (fifoCount*2)];
-				myCache$[index][2 + (fifoCount*2)] = tag;
-				myCache$[index][3 + (fifoCount*2)] = data;
+					//update dirty
+					if(accessType[0]=='s')
+								myCache$[index][myCache$[index][columns-1] + 1] = 1; //if save make dirty... maybe else make it to 0?
+							else
+								myCache$[index][myCache$[index][columns-1] + 1] = 0;
 					
-				UsedCount = UsedCount + 1;
-				if(fifoCount = ways - 1){
-					fifoCount = 0;
+					if(caseA==0){
+						//add new value to capacity array first in first out...
+						//if capacity deletes add to used...
+						if(capacityArray[capacityIndex][0]==-1){
+								capacityArray[capacityIndex][0] = index;
+								capacityArray[capacityIndex][1] = tag;
+						}
+						else{
+								usedArray[usedIndex][0] = capacityArray[capacityIndex][0];
+								usedArray[usedIndex][1] = capacityArray[capacityIndex][1];
+
+								capacityArray[capacityIndex][0] = index;
+								capacityArray[capacityIndex][1] = tag;
+
+								//incrememnt used
+								usedIndex = usedIndex + 1;
+						}
+
+						//properly increase capacity Array's index
+						if(capacityIndex + 1 == capacitySize)
+							capacityIndex = 0;
+						else
+							capacityIndex = capacityIndex + 1;
+					}
+
+					//finally incremenet the index first in first out temp variable by 4 and reset to 0 if it has reached the limit!
+					if(myCache$[index][columns-1] + 4 < columns-1 )
+						myCache$[index][columns-1] = myCache$[index][columns-1] + 4;
+					else
+						myCache$[index][columns-1] = 0;
 				}
-				else{
-					fifoCount = fifoCount + 1;
+				else{// LEAST RECENTLY USED
+					//insert into cachde least recently used
+					int lruColumn = 0;
+					int lowestUsed = INT_MAX;
+					for(int x = 3; x < columns-1 ; x = x + 4)
+						if(myCache$[index][x] < lowestUsed ){
+							lowestUsed = myCache$[index][x];
+							lruColumn = x-3;
+						}
+
+					//if not valid make valid and insert
+					if(myCache$[index][lruColumn] == 0 ){
+						myCache$[index][lruColumn] = 1;
+						myCache$[index][lruColumn + 2] = tag;
+					}
+					else{
+						//else just insert....after check dirty
+						if(myCache$[index][lruColumn + 1]==1)
+							write_xactions = write_xactions + 1;
+						myCache$[index][lruColumn + 2] = tag;
+					}
+
+					//reset lruColumn
+					myCache$[index][lruColumn + 3] = myCache$[index][columns-1]+1;
+
+					//update dirty
+					if(accessType[0]=='s')
+								myCache$[index][lruColumn + 1] = 1; //if save make dirty... maybe else make it to 0?
+							else
+								myCache$[index][lruColumn + 1] = 0;
+					if(caseA==0){
+						//add new value to capacity array least recently used...
+						//if capacity deletes add to used...
+						int lruCapacityRow = 0;
+						int lowestUsedCapacity = INT_MAX;
+						for(int x=0;x<capacitySize;x++){
+							if(capacityArray[x][2]<lowestUsedCapacity){
+								lowestUsedCapacity = capacityArray[x][2];
+								lruCapacityRow=x;
+							}
+						}
+						if(capacityArray[lruCapacityRow][0]==-1){
+								capacityArray[lruCapacityRow][0] = index;
+								capacityArray[lruCapacityRow][1] = tag;
+								capacityArray[lruCapacityRow][2] = capacityIndex;
+						}
+						else{
+								usedArray[usedIndex][0] = capacityArray[lruCapacityRow][0];
+								usedArray[usedIndex][1] = capacityArray[lruCapacityRow][1];
+
+								capacityArray[lruCapacityRow][0] = index;
+								capacityArray[lruCapacityRow][1] = tag;
+								capacityArray[lruCapacityRow][2] = capacityIndex;
+
+								//incrememnt used
+								usedIndex = usedIndex + 1;
+						}
+					}
+					else{
+						//if conflict update capacity Array acordingly
+						for(int x = 0; x<capacitySize;x++)
+			 					if(capacityArray[x][0]==index)
+			 						if(capacityArray[x][1]==tag){
+			 							capacityArray[x][2]=capacityIndex;
+			 							break;
+			 						}
+					}
+					//incremment highest recent number for both capacity and last column in Index in cache
+					capacityIndex  = capacityIndex + 1;
+					myCache$[index][columns-1]=myCache$[index][columns-1] + 1;
 				}
-				
-			 }
+			}
+
 			 int i = 0;
-			char TesterSave[50];
-			memset(&TesterSave[0], 0, sizeof(TesterSave));
+			//char TesterSave[50];
+			//memset(&TesterSave[0], 0, sizeof(TesterSave));
+			char * TesterSave;
+  			TesterSave = (char *) malloc(50* sizeof(char));
 			strncpy(TesterSave, Tester, 12);
+
 			 if (hit == 1){
 				missType = " hit";
 				newLine = strcat(TesterSave, missType);
-				newLine2 = strcat(newLine, "\r\n");
+				newLine2 = strcat(newLine, "\n");
+				//printf("%s", newLine2);
 				fprintf(myTrace2, ("%s", newLine2));
 			 }
 			 else{
-				missType = " miss";
+				//missType = " miss";
 				newLine = strcat(TesterSave, missType);
-				newLine2 = strcat(newLine, "\r\n");
+				newLine2 = strcat(newLine, "\n");
+				//printf("%s", newLine2);
 				fprintf(myTrace2, ("%s", newLine2));
 			 }
 
@@ -352,20 +545,19 @@ int main(int argc, char* argv[])
 			 j += 1;									//Ends the while loop if line is blank
 		}
   }
-  
-  //to do list
-  //old array that contains index and tag
-  //capacity array that also contains last deleted things for capacity size
-  //go to index and compare tags
-  //if its there hit else...
-  //Check if it is in cpacity, if so Conflict
-  //then check if in used, then capacity
-  //if not it is compulsory
-  //add first in first out to index... if removing add to capacity array
-  //add to capacity first in first out, if removing, add to used
+
+  //attemt 3
+  //go to index compare tags, if its there hit else...
+  //Check if in capacity if its there then conflict else...
+  //check if in used then its capacity else
+  //compulsory
+
+  //Whenever you put something into the chache, aka not hit, add to capacity first in first out
+  //if capacity deletes something add to old
 
 
   printf("Miss Rate: %8lf%%\n", ((double) totalMisses) / ((double) totalMisses + (double) totalHits) * 100.0);
+  read_xactions = totalMisses;
   printf("Read Transactions: %d\n", read_xactions);
   printf("Write Transactions: %d\n", write_xactions);
 
