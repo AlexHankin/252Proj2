@@ -329,8 +329,8 @@ int main(int argc, char* argv[])
 								int lruCapacityRow = 0;
 								int lowestUsedCapacity = INT_MAX;
 								for(int z=0;z<capacitySize;z++){
-									if(capacityArray[z][2]<lowestUsedCapacity){
-										lowestUsedCapacity = capacityArray[z][2];
+									if(capacityArray[z][2]+1<lowestUsedCapacity){
+										lowestUsedCapacity = capacityArray[z][2]+1;
 										lruCapacityRow=z;
 									}
 								}
@@ -471,17 +471,19 @@ int main(int argc, char* argv[])
 
 					//update dirty
 					if(accessType[0]=='s')
-								myCache$[index][lruColumn + 1] = 1; //if save make dirty... maybe else make it to 0?
-							else
-								myCache$[index][lruColumn + 1] = 0;
+						myCache$[index][lruColumn + 1] = 1; //if save make dirty... maybe else make it to 0?
+					else
+						myCache$[index][lruColumn + 1] = 0;
+					
 					if(caseA==0){
+						
 						//add new value to capacity array least recently used...
 						//if capacity deletes add to used...
 						int lruCapacityRow = 0;
 						int lowestUsedCapacity = INT_MAX;
 						for(int x=0;x<capacitySize;x++){
-							if(capacityArray[x][2]<lowestUsedCapacity){
-								lowestUsedCapacity = capacityArray[x][2];
+							if(capacityArray[x][2]+1<lowestUsedCapacity){
+								lowestUsedCapacity = capacityArray[x][2]+1;
 								lruCapacityRow=x;
 							}
 						}
@@ -504,12 +506,13 @@ int main(int argc, char* argv[])
 					}
 					else{
 						//if conflict update capacity Array acordingly
-						for(int x = 0; x<capacitySize;x++)
+						for(int x = 0; x<capacitySize;x++){
 			 					if(capacityArray[x][0]==index)
 			 						if(capacityArray[x][1]==tag){
 			 							capacityArray[x][2]=capacityIndex;
 			 							break;
 			 						}
+			 			}
 					}
 					//incremment highest recent number for both capacity and last column in Index in cache
 					capacityIndex  = capacityIndex + 1;
@@ -545,7 +548,9 @@ int main(int argc, char* argv[])
 			 j += 1;									//Ends the while loop if line is blank
 		}
   }
-
+	//for(int x=0;x<capacitySize;x++){
+	//			printf("C1: %d C2: %d c3: %d\n",capacityArray[x][0],capacityArray[x][1],capacityArray[x][2]);
+	//		}
   //attemt 3
   //go to index compare tags, if its there hit else...
   //Check if in capacity if its there then conflict else...
