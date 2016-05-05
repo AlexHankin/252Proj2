@@ -2,6 +2,12 @@
 #include "trace.h"
 #include <limits.h>
 
+/* Project 4 completed by Naropa Perez and Alex Hankin, all implementation is given below with comments
+	All initial objectives created, along with all extra credit
+	Just for the simulated files will appear when the tests are run in the traces folder alongside the initial trace file
+	For the 3rd part of the extra credit, the custom created trace file is in the traces folder labeled "ec3.trace"
+*/
+
 int write_xactions = 0;
 int read_xactions = 0;
 
@@ -147,19 +153,16 @@ int main(int argc, char* argv[])
 	}
 	uint32_t rows = sets;
 	uint32_t columns = (4 * ways) + 1;  //valid, dirty, tag, recently used repeat ... followed by first in first out counter
-	uint32_t myCache$[rows][columns]; 
-
+	uint32_t myCache$[rows][columns];
 	//insantiate everything in cache
 
 	for(int x=0;x<rows;x++)
 		for(int y=0;y<columns;y++)
 			myCache$[x][y]=0;
-
 	//capacity array for checking misses... 
 	uint32_t capacitySize = sets*ways;
 	uint32_t capacityArray[capacitySize][3];//index tag recently used 
 	uint32_t capacityIndex = 0;//first in first out counter
-
 	for (int x = 0; x < capacitySize; x++)
 	{
 		capacityArray[x][0] = -1;
@@ -178,8 +181,10 @@ int main(int argc, char* argv[])
 			lines += 1;
 		}
 	}
+
 	lines = lines - capacitySize;
 	uint32_t usedArray[lines][2];
+
 	uint32_t usedIndex = 0;
 	//int n = sizeof(usedArray)/sizeof(usedArray[0]);
 	//printf("Size of Memory: %d\n", n);
