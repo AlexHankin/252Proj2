@@ -37,11 +37,11 @@ void printHelp(const char * prog) {
 */
 int main(int argc, char* argv[])
 {
-	int i;
+	int i; 
 	uint32_t size = 32; //total size of L1$ (KB)
 	uint32_t ways = 1; //# of ways in L1. Default to direct-mapped
 	uint32_t line = 32; //line size (B)
-	int lru = 0;
+	int lru = 0; // global that determines lru or fifo
 	FILE * myTrace;
 	FILE * myTrace2;
 
@@ -131,7 +131,7 @@ int main(int argc, char* argv[])
     else if (!strcmp(lruString, argv[i])) {
       // Extra Credit: Implement Me!
     		i++;
-    		lru=1;
+    		lru=1; //global to determine if lru or fifo
 			//printf("Unrecognized argument. Exiting.\n");
 			//return -1;
     }
@@ -143,6 +143,7 @@ int main(int argc, char* argv[])
 	}
 	
   /* TODO: Probably should intitalize the cache */
+	//first of all calculate sets and then find the number of rows by deviding by ways
 	uint32_t sets = 1024 * size;
 	int j;
 	for(j = 0; j<sets; j++){
@@ -152,17 +153,18 @@ int main(int argc, char* argv[])
 		}
 	}
 	uint32_t rows = sets;
-	uint32_t columns = (4 * ways) + 1;  //valid, dirty, tag, recently used repeat ... followed by first in first out counter
-	uint32_t myCache$[rows][columns];
+	uint32_t columns = (4 * ways) + 1;  //valid, dirty, tag, lru column repeat ... followed by first in first out counter/lru variable (functions as both depending if fife or lru)
+	uint32_t myCache$[rows][columns]; //make the chache using rows and columns
 	//insantiate everything in cache
-
+	//put a 0 in all of it...
 	for(int x=0;x<rows;x++)
 		for(int y=0;y<columns;y++)
 			myCache$[x][y]=0;
-	//capacity array for checking misses... 
-	uint32_t capacitySize = sets*ways;
-	uint32_t capacityArray[capacitySize][3];//index tag recently used 
-	uint32_t capacityIndex = 0;//first in first out counter
+	//capacity array for checking miss types... 
+	uint32_t capacitySize = sets*ways; //undo the division of way by mult by ways
+	uint32_t capacityArray[capacitySize][3];//index tag lru column repeat 
+	uint32_t capacityIndex = 0;//first in first out counter/lru variable (dunctions as both depends if fifoe or lru)
+	//fill capacityArray with -1's
 	for (int x = 0; x < capacitySize; x++)
 	{
 		capacityArray[x][0] = -1;
@@ -170,8 +172,8 @@ int main(int argc, char* argv[])
 		capacityArray[x][2] = -1;
 	}
 
-	//create an array of all used tags
-	
+	//create an array of all used tags used to calc miss type
+	//first find how many lines the file has. Now it is as long as we will ever need it to be!!
 	uint32_t lines = 0;
 	while(!feof(myTrace))
 	{
@@ -181,29 +183,27 @@ int main(int argc, char* argv[])
 			lines += 1;
 		}
 	}
-
+	//subtract capacitySize because this will always have that many blocks in it at least
 	lines = lines - capacitySize;
-	uint32_t usedArray[lines][2];
+	uint32_t usedArray[lines][2]; // 2 for index and tag, only two that matter
 
-	uint32_t usedIndex = 0;
-	//int n = sizeof(usedArray)/sizeof(usedArray[0]);
-	//printf("Size of Memory: %d\n", n);
+	uint32_t usedIndex = 0; // index to denote what is next place in index
 	
-
+	//use pdf instruction logic to find the index bits
 	int indexBits = 0;
 	int counter = 1;
 	while(sets>counter){
 		counter = counter * 2;
 		indexBits += 1;
 	}
-	
+	//use pdf instruction logic to find oddsetBits
 	int offsetBits = 0;
 	counter = 1;
 	while(line>counter){
 		counter = counter * 2;
 		offsetBits += 1;
 	}
-	
+	//left over is the tagBits
 	int tagBits = 32 - indexBits - offsetBits;
   printf("Ways: %u; Sets: %u; Line Size: %uB\n", ways, sets, line);
   printf("Tag: %d bits; Index: %d bits; Offset: %d bits\n", tagBits, indexBits, offsetBits);
@@ -219,8 +219,6 @@ int main(int argc, char* argv[])
   uint32_t data;
   //uint32_t offset;
   uint32_t tag;
-  int fifoCount = 0;
-  int UsedCount = 0;
   int hit = 0;
   char * missType;
   missType = (char *) malloc(12 * sizeof(char));
@@ -239,12 +237,12 @@ int main(int argc, char* argv[])
   char * newLine=(char *) malloc(100 * sizeof(char));
   char * newLine2=(char *) malloc( 100 * sizeof(char));
   while(j == 0){
-
+  	//each itteration of the while loop takes in a new line contained a new instrunction, tag, and and index
 	  char * Tester;
 	  Tester = (char *) malloc(50);
-	  if((fgets(Tester, 50, myTrace)) != '\0'){			//This is what is new as of tonight mah man
+	  if((fgets(Tester, 50, myTrace)) != '\0'){			
 														//There are debugging print statements for each part of the address
-			hit = 0;											//Also I guess the rest of the program will be contained in this if statement lol
+			hit = 0; //reset the hit variable											
 			 accessType[0] = Tester[0];					//AccessType is a 1character char that stores either "l" or "s"
 			 //printf("accessType: %c\n", accessType[0]);
 
@@ -259,6 +257,7 @@ int main(int argc, char* argv[])
 			 //offset = myAddress<<(32-offsetBits);		//offset is the offset portion of AddTemp
 			 //offset = offset>>(32-offsetBits);
 			 //printf("offset: %d\n", offset);
+			 //if there is an index find it, otherwise set it equal to 0 in fully associative case
 			 if(indexBits!=0){
 			 	index = myAddress<<(tagBits);				//index is the index portion of Addtemp
 			 	index = index>>(tagBits+offsetBits);
@@ -284,14 +283,15 @@ int main(int argc, char* argv[])
 						totalHits = totalHits + 1; //ad to total hit
 						if(accessType[0]=='s')
 							myCache$[index][x+1] = 1; //if save make dirty...
-						
+
+						//if lru update cache lru column apropiately on hits
 						if(lru==1){
 							myCache$[index][x+3]=myCache$[index][columns-1]+1;
 							myCache$[index][columns-1] = myCache$[index][columns-1] + 1;
 						}
 						
 						int inCapacity = 0;
-						for(int z = 0; z<capacitySize;z++){//add to hit counter for our capacity array
+						for(int z = 0; z<capacitySize;z++){//if in capacity. Also add lru column apropiately if hit
 			 				if(capacityArray[z][0]==index)
 			 					if(capacityArray[z][1]==tag){
 			 						inCapacity = 1;
@@ -302,7 +302,7 @@ int main(int argc, char* argv[])
 				 					break;
 			 					}
 			 			}
-			 			
+			 			//only runs if not in capacity
 			 			if (inCapacity==0){
 			 				if(lru==0){
 			 					//add new value to capacity array first in first out...
@@ -375,10 +375,6 @@ int main(int argc, char* argv[])
 			 			if(capacityArray[x][1]==tag){
 			 				missType = " conflict";
 			 				caseA = 1;
-			 				//if(lru==1){//hit in capacity array update accordingly
-			 				//	capacityArray[x][2]=capacityIndex;
-			 				//	capacityIndex=capacityIndex+1;
-			 				//}
 			 				break;
 			 			}
 			 	}
@@ -553,16 +549,13 @@ int main(int argc, char* argv[])
 			 j += 1;									//Ends the while loop if line is blank
 		}
   }
-	//for(int x=0;x<capacitySize;x++){
-	//			printf("C1: %d C2: %d c3: %d\n",capacityArray[x][0],capacityArray[x][1],capacityArray[x][2]);
-	//		}
-  //attemt 3
+  //logic for everyhting
   //go to index compare tags, if its there hit else...
   //Check if in capacity if its there then conflict else...
   //check if in used then its capacity else
   //compulsory
 
-  //Whenever you put something into the chache, aka not hit, add to capacity first in first out
+  //Whenever you put something into the chache, aka not hit, add to capacity first in first out/lru
   //if capacity deletes something add to old
 
 
